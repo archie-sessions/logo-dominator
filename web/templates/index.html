@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Logo Dominator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f5f5f3;
+      --surface:  #ffffff;
+      --border:   #e0e0db;
+      --text:     #1a1a18;
+      --muted:    #767672;
+      --accent:   #2563eb;
+      --accent-h: #1d4ed8;
+      --danger:   #dc2626;
+      --success:  #16a34a;
+      --radius:   10px;
+      --shadow:   0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+
+    .page { max-width: 860px; margin: 0 auto; }
+
+    /* ── header ── */
+    header { margin-bottom: 36px; }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -.4px;
+    }
+    header p {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: .95rem;
+      line-height: 1.5;
+    }
+
+    /* ── card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+
+    /* ── drop zone ── */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      position: relative;
+    }
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: #eff6ff;
+    }
+    #drop-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 12px;
+      color: var(--muted);
+    }
+    #drop-zone h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    #drop-zone p {
+      font-size: .875rem;
+      color: var(--muted);
+    }
+
+    /* ── file list ── */
+    #file-list {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: .875rem;
+    }
+    .file-row .file-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      color: var(--muted);
+    }
+    .file-row .file-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .file-row .remove-btn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 2px;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color .12s;
+    }
+    .file-row .remove-btn:hover { color: var(--danger); }
+
+    /* ── actions ── */
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      align-items: center;
+    }
+    button.primary {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .12s, opacity .12s;
+    }
+    button.primary:hover:not(:disabled) { background: var(--accent-h); }
+    button.primary:disabled { opacity: .45; cursor: not-allowed; }
+
+    button.secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: .9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .12s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button.secondary:hover { background: var(--bg); }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── errors ── */
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: .875rem;
+      color: var(--danger);
+      margin-top: 14px;
+    }
+    .error-box ul { margin-left: 16px; }
+
+    /* ── results ── */
+    #results { display: none; }
+
+    .preview-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      min-height: 160px;
+    }
+    .preview-wrap img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ── stats table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .875rem;
+    }
+    thead th {
+      text-align: left;
+      padding: 8px 12px;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    .scale-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: .8rem;
+      font-weight: 600;
+      background: #eff6ff;
+      color: var(--accent);
+    }
+    .target-row {
+      margin-bottom: 10px;
+      font-size: .875rem;
+      color: var(--muted);
+    }
+    .target-row strong { color: var(--text); }
+
+    /* ── section labels ── */
+    .section-label {
+      font-size: .8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>Logo Dominator</h1>
+    <p>Upload SVG or EPS logos. They'll be scaled to equal visual weight and exported as a single, perfectly-scaled SVG.</p>
+  </header>
+
+  <!-- Upload card -->
+  <div class="card">
+    <div id="drop-zone">
+      <input type="file" id="file-input" multiple accept=".svg,.eps" />
+      <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+      </svg>
+      <h2>Drop logos here</h2>
+      <p>SVG and EPS supported &nbsp;·&nbsp; click to browse</p>
+    </div>
+
+    <div id="file-list"></div>
+
+    <div class="actions">
+      <button class="primary" id="process-btn" disabled>Dominate Now</button>
+      <span id="status-text" style="font-size:.875rem;color:var(--muted)"></span>
+    </div>
+
+    <div id="error-box" class="error-box" style="display:none"></div>
+  </div>
+
+  <!-- Results card -->
+  <div class="card" id="results">
+    <div class="section-label">Preview</div>
+    <div class="preview-wrap">
+      <img id="preview-img" alt="Equalized logos preview" />
+    </div>
+
+    <div class="actions" style="margin-top:16px;margin-bottom:24px">
+      <a id="download-btn" class="secondary" download="equalized_logos.svg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+        </svg>
+        Download SVG
+      </a>
+    </div>
+
+    <div class="section-label">Scale report</div>
+    <div class="target-row">Target dark pixels: <strong id="target-pixels"></strong></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Logo</th>
+          <th>Dark pixels</th>
+          <th>Scale factor</th>
+        </tr>
+      </thead>
+      <tbody id="stats-body"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const fileList   = document.getElementById('file-list');
+  const processBtn = document.getElementById('process-btn');
+  const statusText = document.getElementById('status-text');
+  const errorBox   = document.getElementById('error-box');
+  const results    = document.getElementById('results');
+  const previewImg = document.getElementById('preview-img');
+  const downloadBtn = document.getElementById('download-btn');
+  const statsBody  = document.getElementById('stats-body');
+  const targetPixelsEl = document.getElementById('target-pixels');
+
+  // Maintain our own file array (FileList is immutable)
+  let pendingFiles = [];
+
+  // ── drag & drop ─────────────────────────────────────────────────────────────
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    addFiles(Array.from(e.dataTransfer.files));
+  });
+  fileInput.addEventListener('change', () => {
+    addFiles(Array.from(fileInput.files));
+    fileInput.value = '';
+  });
+
+  function addFiles(incoming) {
+    const allowed = incoming.filter(f => /\.(svg|eps)$/i.test(f.name));
+    allowed.forEach(f => {
+      if (!pendingFiles.find(p => p.name === f.name)) pendingFiles.push(f);
+    });
+    renderFileList();
+  }
+
+  function removeFile(name) {
+    pendingFiles = pendingFiles.filter(f => f.name !== name);
+    renderFileList();
+  }
+
+  function renderFileList() {
+    fileList.innerHTML = '';
+    pendingFiles.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'file-row';
+      const ext = f.name.split('.').pop().toUpperCase();
+      row.innerHTML = `
+        <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+        </svg>
+        <span class="file-name">${escHtml(f.name)}</span>
+        <button class="remove-btn" title="Remove" data-name="${escHtml(f.name)}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>`;
+      fileList.appendChild(row);
+    });
+    fileList.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => removeFile(btn.dataset.name));
+    });
+    processBtn.disabled = pendingFiles.length < 1;
+    statusText.textContent = pendingFiles.length
+      ? `${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} ready`
+      : '';
+  }
+
+  // ── process ──────────────────────────────────────────────────────────────────
+  processBtn.addEventListener('click', async () => {
+    if (!pendingFiles.length) return;
+
+    processBtn.disabled = true;
+    processBtn.innerHTML = '<span class="spinner"></span>Processing…';
+    statusText.textContent = '';
+    errorBox.style.display = 'none';
+    results.style.display = 'none';
+
+    const form = new FormData();
+    pendingFiles.forEach(f => form.append('files', f));
+
+    try {
+      const res = await fetch('/process', { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(data.error || 'Server error');
+        return;
+      }
+
+      // Show non-fatal errors (e.g. one bad file out of several)
+      if (data.errors && data.errors.length) {
+        showError(data.errors, /* fatal= */ false);
+      }
+
+      // Preview
+      const blob = new Blob([data.svg], { type: 'image/svg+xml' });
+      const url  = URL.createObjectURL(blob);
+      previewImg.src = url;
+      downloadBtn.href = url;
+
+      // Stats
+      targetPixelsEl.textContent = data.target_pixels.toLocaleString() + ' px';
+      statsBody.innerHTML = data.stats.map(s => `
+        <tr>
+          <td>${escHtml(s.name)}</td>
+          <td>${s.pixels.toLocaleString()}</td>
+          <td><span class="scale-chip">×${s.scale.toFixed(3)}</span></td>
+        </tr>`).join('');
+
+      results.style.display = 'block';
+      results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (err) {
+      showError('Network error: ' + err.message);
+    } finally {
+      processBtn.disabled = false;
+      processBtn.innerHTML = 'Dominate Now';
+    }
+  });
+
+  function showError(msgs, fatal = true) {
+    const list = Array.isArray(msgs) ? msgs : [msgs];
+    errorBox.innerHTML = list.length === 1
+      ? escHtml(list[0])
+      : '<ul>' + list.map(m => `<li>${escHtml(m)}</li>`).join('') + '</ul>';
+    errorBox.style.display = 'block';
+    if (!fatal) errorBox.style.background = '#fffbeb';
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
