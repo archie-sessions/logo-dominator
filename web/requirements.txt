@@ -1,0 +1,6 @@
+flask
+cairosvg
+numpy
+Pillow
+lxml
+gunicorn
