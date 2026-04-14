@@ -36,9 +36,9 @@
     header { margin-bottom: 36px; }
     header h1 {
       font-family: 'Rubik Beastly', sans-serif;
-      font-size: 1.75rem;
+      font-size: 3.5rem;
       font-weight: 400;
-      letter-spacing: -.4px;
+      letter-spacing: 0;
     }
     header p {
       margin-top: 6px;
@@ -151,8 +151,9 @@
       border: none;
       border-radius: 6px;
       padding: 10px 20px;
-      font-size: .9rem;
-      font-weight: 600;
+      font-family: 'Rubik Beastly', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 400;
       cursor: pointer;
       transition: background .12s, opacity .12s;
     }
@@ -289,7 +290,7 @@
     <div id="file-list"></div>
 
     <div class="actions">
-      <button class="primary" id="process-btn" disabled>Dominate Now</button>
+      <button class="primary" id="process-btn" disabled>Beastly</button>
       <span id="status-text" style="font-size:.875rem;color:var(--muted)"></span>
     </div>
 
@@ -447,7 +448,7 @@
       showError('Network error: ' + err.message);
     } finally {
       processBtn.disabled = false;
-      processBtn.innerHTML = 'Dominate Now';
+      processBtn.innerHTML = 'Beastly';
     }
   });
 
