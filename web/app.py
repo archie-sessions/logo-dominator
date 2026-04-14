@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Logo Dominator — web app
+The Logo Dominator — web app
 Equalize visual weight of SVG/EPS logos and export as a combined SVG.
 """
 
