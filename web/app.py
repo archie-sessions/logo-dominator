@@ -109,12 +109,58 @@ def svg_to_pil(svg_path: str, height: int) -> Image.Image:
     return Image.open(io.BytesIO(png)).convert("RGBA")
 
 
-def count_inked_pixels(img: Image.Image) -> int:
-    """Count opaque pixels that aren't near-white — works for any logo color."""
+def measure_logo(img: Image.Image) -> dict:
+    """
+    Analyze a rasterized logo. Returns:
+      pixels      — inked pixel count (opaque, non-white)
+      content_w/h — tight bounding box around actual content (strips SVG whitespace)
+      density     — coverage ratio: pixels / content area (0–1)
+      darkness    — mean darkness of inked pixels (0=white, 1=black)
+    """
     arr = np.array(img)
+    h, w = arr.shape[:2]
+
     opaque = arr[:, :, 3] > 32
     near_white = (arr[:, :, 0] > 240) & (arr[:, :, 1] > 240) & (arr[:, :, 2] > 240)
-    return int(np.sum(opaque & ~near_white))
+    inked = opaque & ~near_white
+    pixel_count = int(np.sum(inked))
+
+    if pixel_count == 0:
+        return {"pixels": 0, "content_w": w, "content_h": h, "density": 0.0, "darkness": 0.0}
+
+    # Tight content bounding box — strips built-in SVG whitespace padding
+    rows_with_ink = np.any(inked, axis=1)
+    cols_with_ink = np.any(inked, axis=0)
+    row_min = int(np.argmax(rows_with_ink))
+    row_max = int(h - 1 - np.argmax(rows_with_ink[::-1]))
+    col_min = int(np.argmax(cols_with_ink))
+    col_max = int(w - 1 - np.argmax(cols_with_ink[::-1]))
+    content_h = max(1, row_max - row_min + 1)
+    content_w = max(1, col_max - col_min + 1)
+
+    # Density: how much of the content bounding box is actually inked
+    density = pixel_count / (content_w * content_h)
+
+    # Darkness: mean darkness of inked pixels (0=light, 1=dark)
+    inked_px = arr[inked]  # shape (N, 4)
+    lightness = (inked_px[:, 0].astype(np.float32) +
+                 inked_px[:, 1].astype(np.float32) +
+                 inked_px[:, 2].astype(np.float32)) / 3.0
+    darkness = float(1.0 - np.mean(lightness) / 255.0)
+
+    # Vertical centre of mass, weighted by darkness of each inked pixel
+    lum_weights = 1.0 - (arr[inked, :3].astype(np.float32).mean(axis=1) / 255.0)
+    ys = np.where(inked)[0]  # row index of every inked pixel
+    vc_y = float(np.average(ys, weights=lum_weights) / h)
+
+    return {
+        "pixels": pixel_count,
+        "content_w": content_w,
+        "content_h": content_h,
+        "density": density,
+        "darkness": darkness,
+        "vc_y": vc_y,
+    }
 
 
 def _parse_dim(val: str, default: float = 100.0) -> float:
@@ -258,9 +304,11 @@ def compose_svg(logo_items: list[dict], gap: int = 60, row_gap: int = 80,
     for r, row in enumerate(rows):
         row_h = row_heights[r]
         for j, logo in enumerate(row):
-            # Center logo within its column cell, and vertically within the row
+            # Center logo within its column cell; align vertically by visual centre of mass
             lx = col_x[j] + (col_widths[j] - logo["w"]) / 2
-            ly = y + (row_h - logo["h"]) / 2
+            vc_y = logo.get("vc_y", 0.5)
+            ly = y + row_h / 2 - logo["h"] * vc_y
+            ly = max(y, min(ly, y + row_h - logo["h"]))  # clamp within row bounds
             prefix = make_id_prefix(logo["name"], logo["idx"])
             parts.append(embed_svg(
                 logo["svg_path"], lx, ly, logo["w"], logo["h"],
@@ -316,15 +364,22 @@ def process():
     if not logo_items:
         return jsonify(error="No valid files. " + " | ".join(errors)), 400
 
-    # Rasterize and count dark pixels
+    # Rasterize and measure logos
     RENDER_H = 400
+    # Density correction reference: logos at ~35% coverage need no adjustment.
+    # Sparse logos (outlines) scale up; dense logos (solid fills) scale down.
+    DENSITY_REF = 0.35
+    DENSITY_FACTOR = 0.5  # exponent — 0=no correction, 1=full correction
+
     for item in logo_items:
         try:
             img = svg_to_pil(item["svg_path"], RENDER_H)
-            item["pixels"] = count_inked_pixels(img)
+            m = measure_logo(img)
+            item.update(m)
             item["rendered_w"], item["rendered_h"] = img.size
         except Exception as e:
-            item["pixels"] = 0
+            item.update({"pixels": 0, "content_w": 0, "content_h": 0,
+                         "density": 0.0, "darkness": 0.0})
             item["rendered_w"] = item["rendered_h"] = 0
             errors.append(f'{item["name"]}: render error — {e}')
 
@@ -336,7 +391,18 @@ def process():
 
     for item in logo_items:
         c = item["pixels"]
-        item["scale"] = math.sqrt(target / c) if c > 0 else 1.0
+        base_scale = math.sqrt(target / c) if c > 0 else 1.0
+
+        # Density correction: sparse logos (outlines) need more room to look
+        # as heavy as solid-filled logos with the same raw pixel count.
+        d = item.get("density", DENSITY_REF)
+        if d > 0:
+            density_correction = (DENSITY_REF / d) ** DENSITY_FACTOR
+            density_correction = max(0.5, min(2.0, density_correction))
+        else:
+            density_correction = 1.0
+
+        item["scale"] = base_scale * density_correction
 
     svg_string = compose_svg(logo_items)
 
@@ -349,6 +415,7 @@ def process():
             "name": it["name"],
             "pixels": it["pixels"],
             "scale": round(it["scale"], 4),
+            "density": round(it.get("density", 0.0), 3),
         }
         for it in logo_items
     ]
