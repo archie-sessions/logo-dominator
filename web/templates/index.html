@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Logo Dominator</title>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Rubik+Beastly&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Rubik+Dominate&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -35,7 +35,7 @@
     /* ── header ── */
     header { margin-bottom: 36px; }
     header h1 {
-      font-family: 'Rubik Beastly', sans-serif;
+      font-family: 'Rubik Dominate', sans-serif;
       font-size: 3.5rem;
       font-weight: 400;
       letter-spacing: 0;
@@ -146,18 +146,18 @@
       align-items: center;
     }
     button.primary {
-      background: var(--accent);
+      background: #8b0000;
       color: white;
       border: none;
       border-radius: 6px;
       padding: 10px 20px;
-      font-family: 'Rubik Beastly', sans-serif;
+      font-family: 'Rubik Dominate', sans-serif;
       font-size: 1.8rem;
       font-weight: 400;
       cursor: pointer;
       transition: background .12s, opacity .12s;
     }
-    button.primary:hover:not(:disabled) { background: var(--accent-h); }
+    button.primary:hover:not(:disabled) { background: #6b0000; }
     button.primary:disabled { opacity: .45; cursor: not-allowed; }
 
     button.secondary {
@@ -290,7 +290,7 @@
     <div id="file-list"></div>
 
     <div class="actions">
-      <button class="primary" id="process-btn" disabled>Beastly</button>
+      <button class="primary" id="process-btn" disabled>Dominate</button>
       <span id="status-text" style="font-size:.875rem;color:var(--muted)"></span>
     </div>
 
@@ -448,7 +448,7 @@
       showError('Network error: ' + err.message);
     } finally {
       processBtn.disabled = false;
-      processBtn.innerHTML = 'Beastly';
+      processBtn.innerHTML = 'Dominate';
     }
   });
 
