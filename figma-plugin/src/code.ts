@@ -70,7 +70,16 @@ figma.ui.onmessage = async (msg: { type: string } & Record<string, any>) => {
       const scales: ScaleInfo[] = msg.scales;
       const COLS = 4, GAP = 60, ROW_GAP = 80, PADDING = 50;
 
-      // Clone each original node and resize by its scale factor
+      // Reference height = median of original node heights.
+      // All clones resize to (REF_HEIGHT × scale), maintaining aspect ratio.
+      // This mirrors the web app's REF_H approach so logos scale relative to
+      // each other — not relative to their wildly varying Figma canvas sizes.
+      const origHeights = scales
+        .map(s => { const n = figma.getNodeById(s.id); return n ? (n as any).height as number : 0; })
+        .filter((h: number) => h > 0)
+        .sort((a: number, b: number) => a - b);
+      const REF_HEIGHT: number = origHeights[Math.floor(origHeights.length / 2)] ?? 100;
+
       const dominated: Array<{ node: SceneNode; vcY: number }> = [];
 
       for (const s of scales) {
@@ -80,8 +89,10 @@ figma.ui.onmessage = async (msg: { type: string } & Record<string, any>) => {
         const clone = (original as any).clone() as SceneNode;
         const ow: number = (clone as any).width;
         const oh: number = (clone as any).height;
-        if ('resize' in clone) {
-          (clone as any).resize(ow * s.scale, oh * s.scale);
+        if ('resize' in clone && oh > 0) {
+          const finalH = REF_HEIGHT * s.scale;
+          const finalW = (ow / oh) * finalH;
+          (clone as any).resize(finalW, finalH);
         }
         dominated.push({ node: clone, vcY: s.vcY });
       }
