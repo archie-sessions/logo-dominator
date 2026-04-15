@@ -324,18 +324,15 @@ const errorBox    = document.getElementById('error-box');
 const results     = document.getElementById('results');
 const statsBody   = document.getElementById('stats-body');
 
-let currentSelection = [];
+let lastStats = null; // plain variable — sessionStorage unavailable in data: URLs
 
 function renderNodeList(nodes) {
-  currentSelection = nodes;
   nodeList.innerHTML = '';
-
   if (!nodes.length) {
     nodeList.innerHTML = '<div class="empty-msg">No logos selected</div>';
     dominateBtn.disabled = true;
     return;
   }
-
   nodes.forEach(n => {
     const row = document.createElement('div');
     row.className = 'node-row';
@@ -346,7 +343,6 @@ function renderNodeList(nodes) {
       <span class="node-name">${esc(n.name)}</span>`;
     nodeList.appendChild(row);
   });
-
   dominateBtn.disabled = false;
 }
 
@@ -370,7 +366,7 @@ dominateBtn.addEventListener('click', () => {
 });
 
 window.onmessage = async (event) => {
-  const msg = event.data.pluginMessage;
+  const msg = event.data?.pluginMessage;
   if (!msg) return;
 
   switch (msg.type) {
@@ -385,100 +381,39 @@ window.onmessage = async (event) => {
         const measured = await Promise.all(
           msg.exports.map(e => measureFromBytes(e.id, e.name, e.bytes))
         );
-
         const scales = computeScales(measured);
-
         const scaleInfos = measured.map((m, i) => ({
-          id: m.id,
-          name: m.name,
-          scale: scales[i],
-          vcY: m.vcY,
-          pixels: m.pixels,
-          density: m.density,
+          id: m.id, name: m.name,
+          scale: scales[i], vcY: m.vcY,
+          pixels: m.pixels, density: m.density,
         }));
+
+        lastStats = scaleInfos; // stash for display on DONE
 
         dominateBtn.innerHTML = '<span class="spinner"></span>Arranging…';
         parent.postMessage({ pluginMessage: { type: 'APPLY_SCALES', scales: scaleInfos } }, '*');
 
       } catch (e) {
-        showError('Pixel analysis failed: ' + e.message);
+        showError('Pixel analysis failed: ' + (e.message || e));
         dominateBtn.disabled = false;
         dominateBtn.innerHTML = 'Dominate';
       }
-
-      if (msg.failed > 0) {
-        showError(`${msg.failed} node(s) could not be exported and were skipped.`);
-      }
+      if (msg.failed > 0) showError(`${msg.failed} node(s) skipped.`);
       break;
     }
 
-    case 'DONE': {
+    case 'DONE':
       dominateBtn.disabled = false;
       dominateBtn.innerHTML = 'Dominate Again';
-
-      // Rebuild stats from last measured data (stored in scaleInfos above via closure)
-      // We re-request from the previous run stored in sessionStorage
-      const last = sessionStorage.getItem('lastStats');
-      if (last) {
-        renderStats(JSON.parse(last));
-      }
+      if (lastStats) renderStats(lastStats);
       results.style.display = 'block';
       break;
-    }
 
     case 'ERROR':
       showError(msg.message);
       dominateBtn.disabled = false;
       dominateBtn.innerHTML = 'Dominate';
       break;
-  }
-};
-
-// Store stats before sending to sandbox so we can display them on DONE
-const _origOnMessage = window.onmessage;
-window.onmessage = async (event) => {
-  const msg = event.data?.pluginMessage;
-  if (msg?.type === 'PNG_DATA') {
-    // Intercept to stash stats
-    dominateBtn.innerHTML = '<span class="spinner"></span>Analysing…';
-    try {
-      const measured = await Promise.all(
-        msg.exports.map(e => measureFromBytes(e.id, e.name, e.bytes))
-      );
-      const scales = computeScales(measured);
-      const scaleInfos = measured.map((m, i) => ({
-        id: m.id, name: m.name,
-        scale: scales[i], vcY: m.vcY,
-        pixels: m.pixels, density: m.density,
-      }));
-
-      sessionStorage.setItem('lastStats', JSON.stringify(scaleInfos));
-
-      dominateBtn.innerHTML = '<span class="spinner"></span>Arranging…';
-      parent.postMessage({ pluginMessage: { type: 'APPLY_SCALES', scales: scaleInfos } }, '*');
-
-    } catch (e) {
-      showError('Pixel analysis failed: ' + (e.message || e));
-      dominateBtn.disabled = false;
-      dominateBtn.innerHTML = 'Dominate';
-    }
-    if (msg.failed > 0) showError(`${msg.failed} node(s) skipped.`);
-    return;
-  }
-  if (msg?.type === 'DONE') {
-    dominateBtn.disabled = false;
-    dominateBtn.innerHTML = 'Dominate Again';
-    const last = sessionStorage.getItem('lastStats');
-    if (last) renderStats(JSON.parse(last));
-    results.style.display = 'block';
-    return;
-  }
-  if (msg?.type === 'SELECTION') { renderNodeList(msg.nodes); return; }
-  if (msg?.type === 'ERROR') {
-    showError(msg.message);
-    dominateBtn.disabled = false;
-    dominateBtn.innerHTML = 'Dominate';
-    return;
   }
 };
 
