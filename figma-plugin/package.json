@@ -1,0 +1,14 @@
+{
+  "name": "logo-dominator-figma",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "*",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0"
+  }
+}

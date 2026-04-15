@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Logo Dominator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Jacquard+12&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #f5f5f3;
+      --surface: #ffffff;
+      --border:  #e0e0db;
+      --text:    #000000;
+      --muted:   #000000;
+      --accent:  #8b0000;
+      --accent-h:#6b0000;
+      --danger:  #dc2626;
+      --radius:  8px;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 12px;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    /* ── header ── */
+    header { margin-bottom: 16px; }
+    header h1 {
+      font-family: 'Jacquard 12', sans-serif;
+      font-size: 2.6rem;
+      font-weight: 400;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+    header p {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    /* ── section label ── */
+    .label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    /* ── selection list ── */
+    #node-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-height: 36px;
+    }
+    .node-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 11px;
+    }
+    .node-row svg { flex-shrink: 0; color: var(--muted); }
+    .node-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .empty-msg {
+      font-size: 11px;
+      color: var(--muted);
+      padding: 8px 0;
+      text-align: center;
+    }
+
+    /* ── button ── */
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-family: 'Jacquard 12', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 400;
+      cursor: pointer;
+      transition: background .12s, opacity .12s;
+      line-height: 1;
+      margin-top: 12px;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-h); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── error ── */
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--danger);
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* ── results ── */
+    #results { display: none; }
+
+    .success-banner {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      font-size: 11px;
+      color: #16a34a;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    thead th {
+      text-align: left;
+      padding: 5px 8px;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    .chip {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 99px;
+      font-size: 10px;
+      font-weight: 600;
+      background: #fff0f0;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>The Logo Dominator</h1>
+    <p>Select logos on your canvas, then click Dominate.</p>
+  </header>
+
+  <!-- Selection card -->
+  <div class="card" id="selection-card">
+    <div class="label">Selected logos</div>
+    <div id="node-list">
+      <div class="empty-msg">No logos selected</div>
+    </div>
+    <button class="btn-primary" id="dominate-btn" disabled>Dominate</button>
+    <div class="error-box" id="error-box"></div>
+  </div>
+
+  <!-- Results card -->
+  <div class="card" id="results">
+    <div class="success-banner">✓ "Dominated Logos" frame created on your canvas.</div>
+    <div class="label">Scale report</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Logo</th>
+          <th>Pixels</th>
+          <th>Density</th>
+          <th>Scale</th>
+        </tr>
+      </thead>
+      <tbody id="stats-body"></tbody>
+    </table>
+  </div>
+
+<script>
+// ── algorithm (ported from Python) ────────────────────────────────────────────
+
+function measureLogo(imageData) {
+  const { data, width, height } = imageData;
+  const total = width * height;
+
+  let pixelCount = 0;
+  let rowMin = height, rowMax = 0, colMin = width, colMax = 0;
+  const inked = new Uint8Array(total);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+      if (a > 32 && !(r > 240 && g > 240 && b > 240)) {
+        inked[y * width + x] = 1;
+        pixelCount++;
+        if (y < rowMin) rowMin = y;
+        if (y > rowMax) rowMax = y;
+        if (x < colMin) colMin = x;
+        if (x > colMax) colMax = x;
+      }
+    }
+  }
+
+  if (pixelCount === 0) {
+    return { pixels: 0, contentW: width, contentH: height, density: 0, darkness: 0, vcY: 0.5 };
+  }
+
+  const contentH = Math.max(1, rowMax - rowMin + 1);
+  const contentW = Math.max(1, colMax - colMin + 1);
+  const density = pixelCount / (contentW * contentH);
+
+  // Darkness + vertical centre of mass (weighted by darkness)
+  let totalDarkness = 0, weightedY = 0, totalWeight = 0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!inked[y * width + x]) continue;
+      const i = (y * width + x) * 4;
+      const lightness = (data[i] + data[i+1] + data[i+2]) / 3;
+      const darkness = 1 - lightness / 255;
+      totalDarkness += darkness;
+      weightedY += y * darkness;
+      totalWeight += darkness;
+    }
+  }
+
+  const darkness = totalDarkness / pixelCount;
+  const vcY = totalWeight > 0 ? (weightedY / totalWeight) / height : 0.5;
+
+  return { pixels: pixelCount, contentW, contentH, density, darkness, vcY };
+}
+
+function computeScales(metrics) {
+  const DENSITY_REF = 0.35;
+  const DENSITY_FACTOR = 0.5;
+
+  const valid = metrics.filter(m => m.pixels > 0).map(m => m.pixels).sort((a, b) => a - b);
+  if (!valid.length) return metrics.map(() => 1);
+
+  const target = valid[Math.floor(valid.length / 2)];
+
+  return metrics.map(m => {
+    if (!m.pixels) return 1;
+    const base = Math.sqrt(target / m.pixels);
+    const d = m.density || DENSITY_REF;
+    let dc = Math.pow(DENSITY_REF / d, DENSITY_FACTOR);
+    dc = Math.max(0.5, Math.min(2.0, dc));
+    return base * dc;
+  });
+}
+
+async function measureFromBytes(id, name, bytes) {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([new Uint8Array(bytes)], { type: 'image/png' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        const metrics = measureLogo(imageData);
+        URL.revokeObjectURL(url);
+        resolve({ id, name, ...metrics });
+      } catch (e) { reject(e); }
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+// ── UI state ──────────────────────────────────────────────────────────────────
+
+const nodeList    = document.getElementById('node-list');
+const dominateBtn = document.getElementById('dominate-btn');
+const errorBox    = document.getElementById('error-box');
+const results     = document.getElementById('results');
+const statsBody   = document.getElementById('stats-body');
+
+let currentSelection = [];
+
+function renderNodeList(nodes) {
+  currentSelection = nodes;
+  nodeList.innerHTML = '';
+
+  if (!nodes.length) {
+    nodeList.innerHTML = '<div class="empty-msg">No logos selected</div>';
+    dominateBtn.disabled = true;
+    return;
+  }
+
+  nodes.forEach(n => {
+    const row = document.createElement('div');
+    row.className = 'node-row';
+    row.innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+      </svg>
+      <span class="node-name">${esc(n.name)}</span>`;
+    nodeList.appendChild(row);
+  });
+
+  dominateBtn.disabled = false;
+}
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.style.display = 'block';
+}
+
+function clearError() {
+  errorBox.style.display = 'none';
+}
+
+// ── message flow ──────────────────────────────────────────────────────────────
+
+dominateBtn.addEventListener('click', () => {
+  clearError();
+  results.style.display = 'none';
+  dominateBtn.disabled = true;
+  dominateBtn.innerHTML = '<span class="spinner"></span>Measuring…';
+  parent.postMessage({ pluginMessage: { type: 'EXPORT' } }, '*');
+});
+
+window.onmessage = async (event) => {
+  const msg = event.data.pluginMessage;
+  if (!msg) return;
+
+  switch (msg.type) {
+
+    case 'SELECTION':
+      renderNodeList(msg.nodes);
+      break;
+
+    case 'PNG_DATA': {
+      dominateBtn.innerHTML = '<span class="spinner"></span>Analysing…';
+      try {
+        const measured = await Promise.all(
+          msg.exports.map(e => measureFromBytes(e.id, e.name, e.bytes))
+        );
+
+        const scales = computeScales(measured);
+
+        const scaleInfos = measured.map((m, i) => ({
+          id: m.id,
+          name: m.name,
+          scale: scales[i],
+          vcY: m.vcY,
+          pixels: m.pixels,
+          density: m.density,
+        }));
+
+        dominateBtn.innerHTML = '<span class="spinner"></span>Arranging…';
+        parent.postMessage({ pluginMessage: { type: 'APPLY_SCALES', scales: scaleInfos } }, '*');
+
+      } catch (e) {
+        showError('Pixel analysis failed: ' + e.message);
+        dominateBtn.disabled = false;
+        dominateBtn.innerHTML = 'Dominate';
+      }
+
+      if (msg.failed > 0) {
+        showError(`${msg.failed} node(s) could not be exported and were skipped.`);
+      }
+      break;
+    }
+
+    case 'DONE': {
+      dominateBtn.disabled = false;
+      dominateBtn.innerHTML = 'Dominate Again';
+
+      // Rebuild stats from last measured data (stored in scaleInfos above via closure)
+      // We re-request from the previous run stored in sessionStorage
+      const last = sessionStorage.getItem('lastStats');
+      if (last) {
+        renderStats(JSON.parse(last));
+      }
+      results.style.display = 'block';
+      break;
+    }
+
+    case 'ERROR':
+      showError(msg.message);
+      dominateBtn.disabled = false;
+      dominateBtn.innerHTML = 'Dominate';
+      break;
+  }
+};
+
+// Store stats before sending to sandbox so we can display them on DONE
+const _origOnMessage = window.onmessage;
+window.onmessage = async (event) => {
+  const msg = event.data?.pluginMessage;
+  if (msg?.type === 'PNG_DATA') {
+    // Intercept to stash stats
+    dominateBtn.innerHTML = '<span class="spinner"></span>Analysing…';
+    try {
+      const measured = await Promise.all(
+        msg.exports.map(e => measureFromBytes(e.id, e.name, e.bytes))
+      );
+      const scales = computeScales(measured);
+      const scaleInfos = measured.map((m, i) => ({
+        id: m.id, name: m.name,
+        scale: scales[i], vcY: m.vcY,
+        pixels: m.pixels, density: m.density,
+      }));
+
+      sessionStorage.setItem('lastStats', JSON.stringify(scaleInfos));
+
+      dominateBtn.innerHTML = '<span class="spinner"></span>Arranging…';
+      parent.postMessage({ pluginMessage: { type: 'APPLY_SCALES', scales: scaleInfos } }, '*');
+
+    } catch (e) {
+      showError('Pixel analysis failed: ' + (e.message || e));
+      dominateBtn.disabled = false;
+      dominateBtn.innerHTML = 'Dominate';
+    }
+    if (msg.failed > 0) showError(`${msg.failed} node(s) skipped.`);
+    return;
+  }
+  if (msg?.type === 'DONE') {
+    dominateBtn.disabled = false;
+    dominateBtn.innerHTML = 'Dominate Again';
+    const last = sessionStorage.getItem('lastStats');
+    if (last) renderStats(JSON.parse(last));
+    results.style.display = 'block';
+    return;
+  }
+  if (msg?.type === 'SELECTION') { renderNodeList(msg.nodes); return; }
+  if (msg?.type === 'ERROR') {
+    showError(msg.message);
+    dominateBtn.disabled = false;
+    dominateBtn.innerHTML = 'Dominate';
+    return;
+  }
+};
+
+function renderStats(stats) {
+  statsBody.innerHTML = stats.map(s => `
+    <tr>
+      <td title="${esc(s.name)}">${esc(s.name)}</td>
+      <td>${s.pixels.toLocaleString()}</td>
+      <td>${(s.density * 100).toFixed(1)}%</td>
+      <td><span class="chip">×${s.scale.toFixed(3)}</span></td>
+    </tr>`).join('');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Tell sandbox we're ready
+parent.postMessage({ pluginMessage: { type: 'READY' } }, '*');
+</script>
+</body>
+</html>

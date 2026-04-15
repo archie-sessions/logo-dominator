@@ -1,0 +1,7 @@
+{
+  "name": "The Logo Dominator",
+  "id": "logo-dominator",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "editorType": ["figma"]
+}
