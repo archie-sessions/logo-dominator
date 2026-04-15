@@ -275,9 +275,6 @@ function measureLogo(imageData) {
 }
 
 function computeScales(metrics) {
-  const DENSITY_REF = 0.35;
-  const DENSITY_FACTOR = 0.5;
-
   const valid = metrics.filter(m => m.pixels > 0).map(m => m.pixels).sort((a, b) => a - b);
   if (!valid.length) return metrics.map(() => 1);
 
@@ -285,11 +282,7 @@ function computeScales(metrics) {
 
   return metrics.map(m => {
     if (!m.pixels) return 1;
-    const base = Math.sqrt(target / m.pixels);
-    const d = m.density || DENSITY_REF;
-    let dc = Math.pow(DENSITY_REF / d, DENSITY_FACTOR);
-    dc = Math.max(0.5, Math.min(2.0, dc));
-    return base * dc;
+    return Math.sqrt(target / m.pixels);
   });
 }
 
