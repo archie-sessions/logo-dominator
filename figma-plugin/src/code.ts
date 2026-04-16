@@ -1,6 +1,6 @@
 /// <reference types="@figma/plugin-typings" />
 
-figma.showUI(__html__, { width: 420, height: 580, title: 'The Logo Dominator' });
+figma.showUI(__html__, { width: 420, height: 580, title: 'Logo Dominator' });
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -87,12 +87,10 @@ figma.ui.onmessage = async (msg: { type: string } & Record<string, any>) => {
         if (!original || !('clone' in original)) continue;
 
         const clone = (original as any).clone() as SceneNode;
-        const ow: number = (clone as any).width;
         const oh: number = (clone as any).height;
-        if ('resize' in clone && oh > 0) {
+        if ('rescale' in clone && oh > 0) {
           const finalH = REF_HEIGHT * s.scale;
-          const finalW = (ow / oh) * finalH;
-          (clone as any).resize(finalW, finalH);
+          (clone as any).rescale(finalH / oh);
         }
         dominated.push({ node: clone, vcY: s.vcY });
       }
@@ -143,8 +141,7 @@ figma.ui.onmessage = async (msg: { type: string } & Record<string, any>) => {
         row.forEach((d, j) => {
           const n = d.node as any;
           const lx = colX[j] + (colWidths[j] - n.width) / 2;
-          let ly = rowY + rowH / 2 - n.height * d.vcY;
-          ly = Math.max(rowY, Math.min(ly, rowY + rowH - n.height));
+          const ly = rowY + (rowH - n.height) / 2;
           n.x = lx;
           n.y = ly;
           frame.appendChild(d.node);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Logo Dominator</title>
+  <title>Logo Dominator</title>
   <link href="https://fonts.googleapis.com/css2?family=Jacquard+12&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -188,8 +188,8 @@
 <body>
 
   <header>
-    <h1>The Logo Dominator</h1>
-    <p>Select logos on your canvas, then click Dominate.</p>
+    <h1>Logo Dominator</h1>
+    <p>Select artwork on your canvas and bend them to your will by clicking Dominate.</p>
   </header>
 
   <!-- Selection card -->
@@ -274,6 +274,9 @@ function measureLogo(imageData) {
   return { pixels: pixelCount, contentW, contentH, density, darkness, vcY };
 }
 
+const DENSITY_REF    = 0.35; // reference density (median-ish for typical logos)
+const DENSITY_FACTOR = 0.3;  // correction strength — 0 = off, 1 = full
+
 function computeScales(metrics) {
   const valid = metrics.filter(m => m.pixels > 0).map(m => m.pixels).sort((a, b) => a - b);
   if (!valid.length) return metrics.map(() => 1);
@@ -282,7 +285,9 @@ function computeScales(metrics) {
 
   return metrics.map(m => {
     if (!m.pixels) return 1;
-    return Math.sqrt(target / m.pixels);
+    const base = Math.sqrt(target / m.pixels);
+    const densityCorrection = Math.pow(DENSITY_REF / m.density, DENSITY_FACTOR);
+    return base * densityCorrection;
   });
 }
 
@@ -374,6 +379,13 @@ window.onmessage = async (event) => {
         const measured = await Promise.all(
           msg.exports.map(e => measureFromBytes(e.id, e.name, e.bytes))
         );
+        console.table(measured.map(m => ({
+          name: m.name,
+          pixels: m.pixels,
+          contentW: m.contentW,
+          contentH: m.contentH,
+          density: +m.density.toFixed(3),
+        })));
         const scales = computeScales(measured);
         const scaleInfos = measured.map((m, i) => ({
           id: m.id, name: m.name,
